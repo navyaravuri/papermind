@@ -1,12 +1,12 @@
 fastapi
 uvicorn
 llama-index
-llama-index-llms-gemini
+llama-index-llms-google-genai
 llama-index-embeddings-huggingface
-llama-index-multi-modal-llms-gemini
 python-multipart
 requests
 arxiv
 python-dotenv
 Pillow
 nest_asyncio
+pymupdf
