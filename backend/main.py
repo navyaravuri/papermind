@@ -31,7 +31,9 @@ from llama_index.core.agent.workflow import (
 )
 from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core.objects import ObjectIndex
-from llama_index.core import VectorStoreIndex
+from llama_index.core import Settings, VectorStoreIndex
+from llama_index.core.callbacks import CallbackManager, CBEventType, EventPayload
+from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatMessage
 from llama_index.core.base.llms.types import ImageBlock, TextBlock
 
@@ -205,6 +207,30 @@ def query_router(body: MultiPaperQuery):
 SUBQ_PATTERN = re.compile(r"^Sub question:\s*(?P<q>.+?)\s*Response:\s*(?P<a>.+)$", re.DOTALL)
 
 
+class _SubQuestionCapture(BaseCallbackHandler):
+    """Captures every SUB_QUESTION event so we can return which tool answered
+    each sub-question — the source-node text doesn't carry the tool name."""
+
+    def __init__(self):
+        super().__init__(event_starts_to_ignore=[], event_ends_to_ignore=[])
+        self.pairs = []
+
+    def start_trace(self, trace_id=None):
+        pass
+
+    def end_trace(self, trace_id=None, trace_map=None):
+        pass
+
+    def on_event_start(self, event_type, payload=None, event_id="", parent_id="", **kwargs):
+        return event_id
+
+    def on_event_end(self, event_type, payload=None, event_id="", **kwargs):
+        if event_type == CBEventType.SUB_QUESTION and payload is not None:
+            sqp = payload.get(EventPayload.SUB_QUESTION)
+            if sqp is not None:
+                self.pairs.append(sqp)
+
+
 @app.post("/query/subquestion")
 def query_subquestion(body: MultiPaperQuery):
     if not body.paper_ids:
@@ -212,23 +238,51 @@ def query_subquestion(body: MultiPaperQuery):
     papers = _papers_or_404(body.paper_ids)
     tools = [_query_engine_tool(p["paper_id"], p["title"]) for p in papers]
 
-    llm = reasoning_llm()
-    engine = SubQuestionQueryEngine.from_defaults(
-        query_engine_tools=tools,
-        question_gen=LLMQuestionGenerator.from_defaults(llm=llm),
-        llm=llm,
-        use_async=False,
-        verbose=False,
-    )
-    response = engine.query(body.question)
+    capture = _SubQuestionCapture()
+    # Temporarily swap the global callback manager so the engine and its
+    # synthesizer (built via from_defaults) pick it up. Restored in finally
+    # so we don't pollute concurrent requests once they finish.
+    previous_manager = Settings.callback_manager
+    Settings.callback_manager = CallbackManager([capture])
+
+    try:
+        llm = reasoning_llm()
+        engine = SubQuestionQueryEngine.from_defaults(
+            query_engine_tools=tools,
+            question_gen=LLMQuestionGenerator.from_defaults(llm=llm),
+            llm=llm,
+            use_async=False,
+            verbose=False,
+        )
+        response = engine.query(body.question)
+    finally:
+        Settings.callback_manager = previous_manager
+
+    tool_to_paper = {_tool_name(p["paper_id"]): p["paper_id"] for p in papers}
 
     subquestions = []
-    for n in response.source_nodes:
-        m = SUBQ_PATTERN.match(n.node.get_content())
-        if m:
-            subquestions.append(
-                {"question": m.group("q").strip(), "answer": m.group("a").strip()}
-            )
+    for sqp in capture.pairs:
+        sub_q = getattr(sqp, "sub_q", None)
+        tool_name = getattr(sub_q, "tool_name", None) if sub_q else None
+        subquestions.append({
+            "question": getattr(sub_q, "sub_question", "") if sub_q else "",
+            "answer": str(getattr(sqp, "answer", "") or ""),
+            "tool_name": tool_name,
+            "paper_id": tool_to_paper.get(tool_name) if tool_name else None,
+        })
+
+    # Fallback: if the callback captured nothing (rare — older LI versions),
+    # fall back to parsing the source nodes so the client still gets something.
+    if not subquestions:
+        for n in response.source_nodes:
+            m = SUBQ_PATTERN.match(n.node.get_content())
+            if m:
+                subquestions.append({
+                    "question": m.group("q").strip(),
+                    "answer": m.group("a").strip(),
+                    "tool_name": None,
+                    "paper_id": None,
+                })
 
     return {"answer": str(response), "subquestions": subquestions}
 
@@ -242,6 +296,7 @@ async def query_agent(body: MultiPaperQuery):
         raise HTTPException(status_code=400, detail="paper_ids must be non-empty")
     papers = _papers_or_404(body.paper_ids)
     tools = [_query_engine_tool(p["paper_id"], p["title"]) for p in papers]
+    tool_to_paper = {_tool_name(p["paper_id"]): p["paper_id"] for p in papers}
 
     llm = reasoning_llm()
     agent = ReActAgent(tools=tools, llm=llm)
@@ -255,16 +310,28 @@ async def query_agent(body: MultiPaperQuery):
         if isinstance(ev, AgentStream):
             current_thought += ev.delta
         elif isinstance(ev, ToolCall):
+            kwargs = dict(ev.tool_kwargs)
             pending_action = {
                 "thought": current_thought.strip(),
-                "action": f"{ev.tool_name}({dict(ev.tool_kwargs)})",
+                "tool_name": ev.tool_name,
+                "tool_kwargs": kwargs,
+                "paper_id": tool_to_paper.get(ev.tool_name),
+                # Human-readable form for direct display in the UI.
+                "action": f"{ev.tool_name}({kwargs})",
                 "observation": "",
             }
             current_thought = ""
         elif isinstance(ev, ToolCallResult):
             obs = str(ev.tool_output)
             if pending_action is None:
-                pending_action = {"thought": current_thought.strip(), "action": "", "observation": ""}
+                pending_action = {
+                    "thought": current_thought.strip(),
+                    "tool_name": None,
+                    "tool_kwargs": {},
+                    "paper_id": None,
+                    "action": "",
+                    "observation": "",
+                }
                 current_thought = ""
             pending_action["observation"] = obs[:600]
             trace.append(pending_action)

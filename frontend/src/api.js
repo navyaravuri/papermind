@@ -43,4 +43,8 @@ export const api = {
     postJSON('/query/rag', { paper_id: paperId, question }),
   queryRouter: (paperIds, question) =>
     postJSON('/query/router', { paper_ids: paperIds, question }),
+  querySubquestion: (paperIds, question) =>
+    postJSON('/query/subquestion', { paper_ids: paperIds, question }),
+  queryAgent: (paperIds, question) =>
+    postJSON('/query/agent', { paper_ids: paperIds, question }),
 }

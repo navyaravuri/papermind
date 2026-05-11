@@ -17,6 +17,16 @@ export default function App() {
   const [chats, setChats] = useState({})
   const [panelData, setPanelData] = useState({})
 
+  // One-shot tabs (Deep Dive, Agent) don't use a chat. We hold their
+  // last-submitted state up here so switching tabs preserves it.
+  const [singleshot, setSingleshot] = useState({})
+
+  // Paper-pulse signals: { paperId: monotonically-increasing version }.
+  // The sidebar's PaperCard watches its own counter and restarts a CSS
+  // animation when it changes — supports rapid repeat pulses without
+  // missing any like a single-flag pattern would.
+  const [pulseSignals, setPulseSignals] = useState({})
+
   const [journal, setJournal] = useState([])
   const [journalOpen, setJournalOpen] = useState(false)
 
@@ -83,6 +93,21 @@ export default function App() {
     setArxivQuery(query)
   }, [])
 
+  const updateSingleshot = useCallback((tab, patch) => {
+    setSingleshot((prev) => ({
+      ...prev,
+      [tab]: { ...(prev[tab] || {}), ...patch },
+    }))
+  }, [])
+
+  const pulsePaper = useCallback((paperId) => {
+    if (!paperId) return
+    setPulseSignals((prev) => ({
+      ...prev,
+      [paperId]: (prev[paperId] || 0) + 1,
+    }))
+  }, [])
+
   return (
     <div className="flex h-full w-full bg-bg text-text-primary">
       <Sidebar
@@ -94,6 +119,7 @@ export default function App() {
         onArxivOnChange={setArxivOn}
         arxivQuery={arxivQuery}
         onArxivQueryChange={setArxivQuery}
+        pulseSignals={pulseSignals}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -108,6 +134,8 @@ export default function App() {
           papers={papers}
           chats={chats}
           updateChat={updateChat}
+          singleshot={singleshot}
+          updateSingleshot={updateSingleshot}
           setRightDataFor={setRightDataFor}
           addJournalEntry={appendJournalEntry}
           arxivOn={arxivOn}
@@ -121,6 +149,7 @@ export default function App() {
         papers={papers}
         collapsed={rightCollapsed}
         onToggle={() => setRightCollapsed((v) => !v)}
+        onPulsePaper={pulsePaper}
       />
 
       <JournalDrawer

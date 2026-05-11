@@ -11,6 +11,7 @@ export default function Sidebar({
   onArxivOnChange,
   arxivQuery,
   onArxivQueryChange,
+  pulseSignals = {},
 }) {
   const fileInput = useRef(null)
   const [uploading, setUploading] = useState(false)
@@ -134,7 +135,11 @@ export default function Sidebar({
       )}
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        <PaperList papers={papers} onDelete={handleDelete} />
+        <PaperList
+          papers={papers}
+          onDelete={handleDelete}
+          pulseSignals={pulseSignals}
+        />
 
         {arxivOn && (
           <ArxivResults
@@ -150,7 +155,7 @@ export default function Sidebar({
   )
 }
 
-function PaperList({ papers, onDelete }) {
+function PaperList({ papers, onDelete, pulseSignals }) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2 px-1">
@@ -163,33 +168,64 @@ function PaperList({ papers, onDelete }) {
       ) : (
         <ul className="space-y-2">
           {papers.map((p) => (
-            <li key={p.paper_id} className="group card p-3 hover:border-accent/50 transition-colors">
-              <div className="flex items-start gap-2">
-                <span
-                  className="mt-1 w-2 h-2 rounded-full shrink-0"
-                  style={{ background: colorForPaper(p.paper_id) }}
-                  aria-hidden="true"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm leading-snug line-clamp-2">{p.title}</div>
-                  <div className="text-[11px] text-text-muted font-mono mt-0.5 truncate">
-                    {p.paper_id}
-                  </div>
-                </div>
-                <button
-                  onClick={() => onDelete(p.paper_id)}
-                  className="btn-ghost opacity-0 group-hover:opacity-100 text-lg leading-none px-1"
-                  title="Remove paper"
-                  aria-label={`Remove ${p.title}`}
-                >
-                  ×
-                </button>
-              </div>
-            </li>
+            <PaperCard
+              key={p.paper_id}
+              paper={p}
+              pulseCount={pulseSignals?.[p.paper_id] || 0}
+              onDelete={onDelete}
+            />
           ))}
         </ul>
       )}
     </div>
+  )
+}
+
+function PaperCard({ paper, pulseCount, onDelete }) {
+  const [pulsing, setPulsing] = useState(false)
+
+  // Restart the animation whenever the pulse counter increments. We tear
+  // off the class first so a second pulse can replay even with the same
+  // animation name.
+  useEffect(() => {
+    if (!pulseCount) return
+    setPulsing(false)
+    const raf = requestAnimationFrame(() => setPulsing(true))
+    const t = setTimeout(() => setPulsing(false), 900)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(t)
+    }
+  }, [pulseCount])
+
+  return (
+    <li
+      className={`group card p-3 hover:border-accent/50 transition-colors ${
+        pulsing ? 'paper-pulse' : ''
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <span
+          className="mt-1 w-2 h-2 rounded-full shrink-0"
+          style={{ background: colorForPaper(paper.paper_id) }}
+          aria-hidden="true"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm leading-snug line-clamp-2">{paper.title}</div>
+          <div className="text-[11px] text-text-muted font-mono mt-0.5 truncate">
+            {paper.paper_id}
+          </div>
+        </div>
+        <button
+          onClick={() => onDelete(paper.paper_id)}
+          className="btn-ghost opacity-0 group-hover:opacity-100 text-lg leading-none px-1"
+          title="Remove paper"
+          aria-label={`Remove ${paper.title}`}
+        >
+          ×
+        </button>
+      </div>
+    </li>
   )
 }
 

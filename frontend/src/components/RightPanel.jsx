@@ -1,5 +1,7 @@
 import { TABS } from '../tabs'
 import { colorForPaper } from '../colors'
+import SubquestionTree from './SubquestionTree'
+import ReasoningTrace from './ReasoningTrace'
 
 export default function RightPanel({
   activeTab,
@@ -7,6 +9,7 @@ export default function RightPanel({
   papers,
   collapsed,
   onToggle,
+  onPulsePaper,
 }) {
   const tab = TABS.find((t) => t.id === activeTab)
   const label = tab?.panel || 'Context'
@@ -42,13 +45,18 @@ export default function RightPanel({
         </button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        <PanelContent activeTab={activeTab} data={data} papers={papers} />
+        <PanelContent
+          activeTab={activeTab}
+          data={data}
+          papers={papers}
+          onPulsePaper={onPulsePaper}
+        />
       </div>
     </aside>
   )
 }
 
-function PanelContent({ activeTab, data, papers }) {
+function PanelContent({ activeTab, data, papers, onPulsePaper }) {
   if (!data) {
     return (
       <div className="text-text-muted text-sm leading-relaxed">
@@ -67,6 +75,12 @@ function PanelContent({ activeTab, data, papers }) {
         papers={papers}
       />
     )
+  }
+  if (activeTab === 'deepdive') {
+    return <SubquestionTree data={data} papers={papers} />
+  }
+  if (activeTab === 'agent') {
+    return <ReasoningTrace data={data} papers={papers} onPulsePaper={onPulsePaper} />
   }
   return (
     <div className="text-text-muted text-sm">This tab is not wired yet.</div>

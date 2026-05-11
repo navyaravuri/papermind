@@ -30,6 +30,37 @@
   }
 }
 
+@keyframes paper-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(124, 106, 247, 0.55);
+    border-color: rgba(124, 106, 247, 0.9);
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgba(124, 106, 247, 0);
+    border-color: rgba(124, 106, 247, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(124, 106, 247, 0);
+  }
+}
+.paper-pulse {
+  animation: paper-pulse 900ms ease-out;
+}
+
+@keyframes step-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.step-fade-in {
+  animation: step-fade-in 260ms ease-out both;
+}
+
 /* Subtle scrollbars so the dark panels don't get bright OS bars. */
 ::-webkit-scrollbar {
   width: 8px;

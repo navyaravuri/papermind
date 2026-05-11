@@ -1,12 +1,11 @@
+import { useCallback } from 'react'
 import { TABS } from '../tabs'
 import AskPaperTab from './AskPaperTab'
 import SmartRouterTab from './SmartRouterTab'
+import DeepDiveTab from './DeepDiveTab'
+import AgentTab from './AgentTab'
 
 const PLACEHOLDER_COPY = {
-  deepdive:
-    'Comparative questions across multiple papers. The engine decomposes your question into per-paper sub-questions.',
-  agent:
-    "A ReAct agent that chains retrieval and calculator tools. Reasoning steps appear in the right panel.",
   network:
     "Multi-document agent that pulls from every paper in your library and shows each paper's contribution.",
   figure:
@@ -18,6 +17,8 @@ export default function TabPanel({
   papers,
   chats,
   updateChat,
+  singleshot,
+  updateSingleshot,
   setRightDataFor,
   addJournalEntry,
   arxivOn,
@@ -25,6 +26,16 @@ export default function TabPanel({
 }) {
   const messages = chats[activeTab] || []
   const onMessagesChange = (fn) => updateChat(activeTab, fn)
+
+  // Stable per-tab helpers for the one-shot tabs.
+  const patchDeepDive = useCallback(
+    (patch) => updateSingleshot('deepdive', patch),
+    [updateSingleshot]
+  )
+  const patchAgent = useCallback(
+    (patch) => updateSingleshot('agent', patch),
+    [updateSingleshot]
+  )
 
   if (activeTab === 'ask') {
     return (
@@ -48,6 +59,30 @@ export default function TabPanel({
         onMessagesChange={onMessagesChange}
         onRightPanelData={(d) => setRightDataFor('router', d)}
         onJournalEntry={addJournalEntry}
+      />
+    )
+  }
+
+  if (activeTab === 'deepdive') {
+    return (
+      <DeepDiveTab
+        papers={papers}
+        state={singleshot.deepdive || {}}
+        patchState={patchDeepDive}
+        setRightPanelData={(d) => setRightDataFor('deepdive', d)}
+        addJournalEntry={addJournalEntry}
+      />
+    )
+  }
+
+  if (activeTab === 'agent') {
+    return (
+      <AgentTab
+        papers={papers}
+        state={singleshot.agent || {}}
+        patchState={patchAgent}
+        setRightPanelData={(d) => setRightDataFor('agent', d)}
+        addJournalEntry={addJournalEntry}
       />
     )
   }
