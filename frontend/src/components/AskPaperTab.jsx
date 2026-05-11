@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { api } from '../api'
 import { runChatTurn } from '../chatActions'
 import ChatPanel from './ChatPanel'
+import NudgeBanner from './NudgeBanner'
 
 export default function AskPaperTab({
   papers,
@@ -11,8 +12,12 @@ export default function AskPaperTab({
   onJournalEntry,
   arxivOn,
   onArxivSearch,
+  // Lifted to App so the dropdown selection survives tab remounts
+  // (the tab-fade animation re-keys this subtree on activation).
+  paperId,
+  onPaperIdChange,
 }) {
-  const [paperId, setPaperId] = useState(papers[0]?.paper_id || '')
+  const setPaperId = onPaperIdChange
 
   // Keep the selection valid when papers are added/removed in the sidebar.
   useEffect(() => {
@@ -21,7 +26,7 @@ export default function AskPaperTab({
     } else if (!paperId && papers.length > 0) {
       setPaperId(papers[0].paper_id)
     }
-  }, [papers, paperId])
+  }, [papers, paperId, setPaperId])
 
   if (papers.length === 0) {
     return (
@@ -108,14 +113,12 @@ export default function AskPaperTab({
       </div>
 
       {showNudge && (
-        <div className="mb-3 card border-accent/40 bg-accent/5 px-3 py-2.5 text-sm flex items-center justify-between gap-3">
-          <span>Limited context found — want to search arXiv?</span>
-          <button
-            onClick={() => onArxivSearch?.(lastOk.question || '')}
-            className="btn-accent text-xs !py-1.5"
-          >
-            Search
-          </button>
+        <div className="mb-3">
+          <NudgeBanner
+            message="Limited context found — want to search arXiv?"
+            onSearch={() => onArxivSearch?.(lastOk.question || '')}
+            searchLabel="Search"
+          />
         </div>
       )}
 

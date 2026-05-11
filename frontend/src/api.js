@@ -47,4 +47,13 @@ export const api = {
     postJSON('/query/subquestion', { paper_ids: paperIds, question }),
   queryAgent: (paperIds, question) =>
     postJSON('/query/agent', { paper_ids: paperIds, question }),
+  queryMultidoc: (question) =>
+    postJSON('/query/multidoc', { question }),
+  queryMultimodal: ({ image, question, paperId }) => {
+    const fd = new FormData()
+    fd.append('image', image)
+    fd.append('question', question)
+    if (paperId) fd.append('paper_id', paperId)
+    return request('/query/multimodal', { method: 'POST', body: fd })
+  },
 }

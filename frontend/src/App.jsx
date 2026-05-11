@@ -108,6 +108,27 @@ export default function App() {
     }))
   }, [])
 
+  // Controls surfaced to the Figure Context right-panel so the user can
+  // toggle "Save to paper index" without us bouncing state through panelData.
+  const figureState = singleshot.figure || {}
+  const linkedPaper = papers.find(
+    (p) => p.paper_id === figureState.paperId
+  )
+  const figureControls = useMemo(
+    () => ({
+      saveToIndex: !!figureState.saveToIndex,
+      onChangeSaveToIndex: (v) => updateSingleshot('figure', { saveToIndex: v }),
+      hasPaper: !!figureState.paperId,
+      paperTitle: linkedPaper?.title || figureState.paperId || '',
+    }),
+    [
+      figureState.saveToIndex,
+      figureState.paperId,
+      linkedPaper?.title,
+      updateSingleshot,
+    ]
+  )
+
   return (
     <div className="flex h-full w-full bg-bg text-text-primary">
       <Sidebar
@@ -129,18 +150,23 @@ export default function App() {
           onOpenJournal={() => setJournalOpen(true)}
           journalCount={journal.length}
         />
-        <TabPanel
-          activeTab={activeTab}
-          papers={papers}
-          chats={chats}
-          updateChat={updateChat}
-          singleshot={singleshot}
-          updateSingleshot={updateSingleshot}
-          setRightDataFor={setRightDataFor}
-          addJournalEntry={appendJournalEntry}
-          arxivOn={arxivOn}
-          onArxivSearch={triggerArxivSearch}
-        />
+        {/* key={activeTab} replays the fade-in animation on every tab change.
+            Per-tab UI state lives in chats/singleshot/panelData up here, so
+            the remount doesn't lose anything important. */}
+        <div key={activeTab} className="tab-fade-in flex-1 flex flex-col min-h-0">
+          <TabPanel
+            activeTab={activeTab}
+            papers={papers}
+            chats={chats}
+            updateChat={updateChat}
+            singleshot={singleshot}
+            updateSingleshot={updateSingleshot}
+            setRightDataFor={setRightDataFor}
+            addJournalEntry={appendJournalEntry}
+            arxivOn={arxivOn}
+            onArxivSearch={triggerArxivSearch}
+          />
+        </div>
       </main>
 
       <RightPanel
@@ -150,6 +176,9 @@ export default function App() {
         collapsed={rightCollapsed}
         onToggle={() => setRightCollapsed((v) => !v)}
         onPulsePaper={pulsePaper}
+        arxivOn={arxivOn}
+        onArxivSearch={triggerArxivSearch}
+        figureControls={figureControls}
       />
 
       <JournalDrawer

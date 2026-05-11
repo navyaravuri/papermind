@@ -61,6 +61,20 @@
   animation: step-fade-in 260ms ease-out both;
 }
 
+@keyframes tab-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tab-fade-in {
+  animation: tab-fade-in 220ms ease-out;
+}
+
 /* Subtle scrollbars so the dark panels don't get bright OS bars. */
 ::-webkit-scrollbar {
   width: 8px;

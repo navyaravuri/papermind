@@ -448,7 +448,10 @@ async def query_multimodal(
             role="user",
             blocks=[TextBlock(text=question), ImageBlock(path=tmp.name)],
         )
-        answer = (multimodal_llm.chat([answer_msg]).message.content or "").strip()
+        # `achat` instead of `chat` — the sync wrapper calls asyncio.run()
+        # internally and crashes inside FastAPI's running event loop.
+        answer_resp = await multimodal_llm.achat([answer_msg])
+        answer = (answer_resp.message.content or "").strip()
 
         describe_msg = ChatMessage(
             role="user",
@@ -457,9 +460,8 @@ async def query_multimodal(
                 ImageBlock(path=tmp.name),
             ],
         )
-        description = (
-            multimodal_llm.chat([describe_msg]).message.content or ""
-        ).strip()
+        describe_resp = await multimodal_llm.achat([describe_msg])
+        description = (describe_resp.message.content or "").strip()
 
         if paper_id:
             if paper_store.get_paper(paper_id) is None:

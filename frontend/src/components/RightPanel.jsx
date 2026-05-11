@@ -2,6 +2,8 @@ import { TABS } from '../tabs'
 import { colorForPaper } from '../colors'
 import SubquestionTree from './SubquestionTree'
 import ReasoningTrace from './ReasoningTrace'
+import ContributionsList from './ContributionsList'
+import FigureContext from './FigureContext'
 
 export default function RightPanel({
   activeTab,
@@ -10,6 +12,9 @@ export default function RightPanel({
   collapsed,
   onToggle,
   onPulsePaper,
+  arxivOn,
+  onArxivSearch,
+  figureControls,
 }) {
   const tab = TABS.find((t) => t.id === activeTab)
   const label = tab?.panel || 'Context'
@@ -50,66 +55,76 @@ export default function RightPanel({
           data={data}
           papers={papers}
           onPulsePaper={onPulsePaper}
+          arxivOn={arxivOn}
+          onArxivSearch={onArxivSearch}
+          figureControls={figureControls}
         />
       </div>
     </aside>
   )
 }
 
-function PanelContent({ activeTab, data, papers, onPulsePaper }) {
-  if (!data) {
-    return (
-      <div className="text-text-muted text-sm leading-relaxed">
-        Run a query to see {labelForEmpty(activeTab)} here.
-      </div>
+function PanelContent({
+  activeTab,
+  data,
+  papers,
+  onPulsePaper,
+  arxivOn,
+  onArxivSearch,
+  figureControls,
+}) {
+  if (activeTab === 'ask') {
+    return data ? (
+      <SourcesList sources={data.sources || []} />
+    ) : (
+      <Empty>Run a query to see source passages here.</Empty>
     )
   }
-  if (activeTab === 'ask') {
-    return <SourcesList sources={data.sources || []} />
-  }
   if (activeTab === 'router') {
-    return (
+    return data ? (
       <RoutingDecision
         selectedPaper={data.selectedPaper}
         reason={data.routingReason}
         papers={papers}
       />
+    ) : (
+      <Empty>Run a query to see routing decisions here.</Empty>
     )
   }
   if (activeTab === 'deepdive') {
     return <SubquestionTree data={data} papers={papers} />
   }
   if (activeTab === 'agent') {
-    return <ReasoningTrace data={data} papers={papers} onPulsePaper={onPulsePaper} />
+    return (
+      <ReasoningTrace data={data} papers={papers} onPulsePaper={onPulsePaper} />
+    )
   }
-  return (
-    <div className="text-text-muted text-sm">This tab is not wired yet.</div>
-  )
+  if (activeTab === 'network') {
+    return (
+      <ContributionsList
+        data={data}
+        papers={papers}
+        arxivOn={arxivOn}
+        onArxivSearch={onArxivSearch}
+      />
+    )
+  }
+  if (activeTab === 'figure') {
+    return <FigureContext data={data} controls={figureControls} />
+  }
+  return <Empty>This tab is not wired yet.</Empty>
 }
 
-function labelForEmpty(activeTab) {
-  switch (activeTab) {
-    case 'ask':
-      return 'source passages'
-    case 'router':
-      return 'routing decisions'
-    case 'deepdive':
-      return 'the sub-question breakdown'
-    case 'agent':
-      return 'reasoning steps'
-    case 'network':
-      return 'cross-paper contributions'
-    case 'figure':
-      return 'figure context'
-    default:
-      return 'context'
-  }
+function Empty({ children }) {
+  return (
+    <div className="text-text-muted text-sm leading-relaxed">{children}</div>
+  )
 }
 
 function SourcesList({ sources }) {
   if (sources.length === 0) {
     return (
-      <div className="text-text-muted text-sm">No source passages returned.</div>
+      <Empty>No source passages returned.</Empty>
     )
   }
   return (

@@ -1,6 +1,7 @@
 import { api } from '../api'
 import { runChatTurn } from '../chatActions'
 import ChatPanel from './ChatPanel'
+import NudgeBanner from './NudgeBanner'
 
 export default function SmartRouterTab({
   papers,
@@ -8,6 +9,8 @@ export default function SmartRouterTab({
   onMessagesChange,
   onRightPanelData,
   onJournalEntry,
+  arxivOn,
+  onArxivSearch,
 }) {
   if (papers.length === 0) {
     return (
@@ -55,12 +58,26 @@ export default function SmartRouterTab({
     if (question) submit(question, message.id)
   }
 
+  // The router only adds value across 2+ papers — if the library is smaller
+  // than that and arXiv search is enabled, surface the nudge.
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+  const showNudge = arxivOn && papers.length < 2
+
   return (
     <div className="flex-1 flex flex-col px-6 pt-4 pb-4 min-h-0">
       <div className="mb-3 text-xs text-text-muted">
         Routing across {papers.length} paper{papers.length === 1 ? '' : 's'} —
         the router picks the most relevant one for each question.
       </div>
+      {showNudge && (
+        <div className="mb-3">
+          <NudgeBanner
+            message="With one paper, the router can't really route. Add more papers or search arXiv."
+            onSearch={() => onArxivSearch?.(lastUserMsg?.content || '')}
+            searchLabel="Search"
+          />
+        </div>
+      )}
       <ChatPanel
         messages={messages}
         onSubmit={(q) => submit(q)}
