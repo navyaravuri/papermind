@@ -1,0 +1,73 @@
+import { api } from '../api'
+import { runChatTurn } from '../chatActions'
+import ChatPanel from './ChatPanel'
+
+export default function SmartRouterTab({
+  papers,
+  messages,
+  onMessagesChange,
+  onRightPanelData,
+  onJournalEntry,
+}) {
+  if (papers.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center px-8 text-center">
+        <div className="max-w-sm text-text-muted text-sm leading-relaxed">
+          Upload at least one paper to use the router.
+        </div>
+      </div>
+    )
+  }
+
+  const paperIds = papers.map((p) => p.paper_id)
+
+  function buildAssistantPatch(response) {
+    return { content: response.answer }
+  }
+
+  function buildPanelData(response) {
+    return {
+      selectedPaper: response.selected_paper,
+      routingReason: response.routing_reason,
+    }
+  }
+
+  function submit(question, retryAgainstId) {
+    // Snapshot the paper set at submit time so a deletion mid-flight doesn't
+    // change what the retry would re-send.
+    const idsAtSubmit = [...paperIds]
+    return runChatTurn({
+      question,
+      setMessages: onMessagesChange,
+      apiCall: () => api.queryRouter(idsAtSubmit, question),
+      buildAssistantPatch,
+      buildPanelData,
+      setPanelData: onRightPanelData,
+      appendJournal: onJournalEntry,
+      tabId: 'router',
+      retryPayload: { question, paperIds: idsAtSubmit },
+      reuseAssistantId: retryAgainstId,
+    })
+  }
+
+  function handleRetry(message) {
+    const question = message.retry?.question || message.question
+    if (question) submit(question, message.id)
+  }
+
+  return (
+    <div className="flex-1 flex flex-col px-6 pt-4 pb-4 min-h-0">
+      <div className="mb-3 text-xs text-text-muted">
+        Routing across {papers.length} paper{papers.length === 1 ? '' : 's'} —
+        the router picks the most relevant one for each question.
+      </div>
+      <ChatPanel
+        messages={messages}
+        onSubmit={(q) => submit(q)}
+        onRetry={handleRetry}
+        placeholder="Ask a question. The router picks the right paper."
+        emptyHint="Ask anything — the router will choose which paper to consult."
+      />
+    </div>
+  )
+}

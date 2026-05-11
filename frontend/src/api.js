@@ -18,6 +18,14 @@ async function request(path, options = {}) {
   return res.json()
 }
 
+function postJSON(path, body) {
+  return request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 export const api = {
   listPapers: () => request('/papers'),
   uploadPaper: (file) => {
@@ -31,4 +39,8 @@ export const api = {
     request(`/arxiv/search?q=${encodeURIComponent(q)}&max_results=${maxResults}`),
   arxivImport: (arxivId) =>
     request(`/arxiv/import/${encodeURIComponent(arxivId)}`, { method: 'POST' }),
+  queryRag: (paperId, question) =>
+    postJSON('/query/rag', { paper_id: paperId, question }),
+  queryRouter: (paperIds, question) =>
+    postJSON('/query/router', { paper_ids: paperIds, question }),
 }

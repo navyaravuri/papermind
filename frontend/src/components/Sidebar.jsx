@@ -2,14 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { colorForPaper } from '../colors'
 
-export default function Sidebar({ papers, onUploaded, onDeleted, onImported }) {
+export default function Sidebar({
+  papers,
+  onUploaded,
+  onDeleted,
+  onImported,
+  arxivOn,
+  onArxivOnChange,
+  arxivQuery,
+  onArxivQueryChange,
+}) {
   const fileInput = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
 
-  // arXiv search state lives in the sidebar — it only affects the sidebar UI.
-  const [arxivOn, setArxivOn] = useState(false)
-  const [arxivQuery, setArxivQuery] = useState('')
+  // Results/loading/importing are local — they don't need to live in App.
   const [arxivResults, setArxivResults] = useState([])
   const [arxivLoading, setArxivLoading] = useState(false)
   const [arxivImporting, setArxivImporting] = useState(null)
@@ -101,7 +108,7 @@ export default function Sidebar({ papers, onUploaded, onDeleted, onImported }) {
           <input
             type="checkbox"
             checked={arxivOn}
-            onChange={(e) => setArxivOn(e.target.checked)}
+            onChange={(e) => onArxivOnChange(e.target.checked)}
             className="sr-only peer"
           />
           <span className="relative w-9 h-5 bg-border peer-checked:bg-accent rounded-full transition-colors">
@@ -113,7 +120,7 @@ export default function Sidebar({ papers, onUploaded, onDeleted, onImported }) {
           <input
             type="text"
             value={arxivQuery}
-            onChange={(e) => setArxivQuery(e.target.value)}
+            onChange={(e) => onArxivQueryChange(e.target.value)}
             placeholder="Search arXiv…"
             className="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
           />
