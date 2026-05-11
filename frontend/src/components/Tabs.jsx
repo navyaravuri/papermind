@@ -1,6 +1,14 @@
 import { TABS } from '../tabs'
 
-export default function Tabs({ activeTab, onChange, onOpenJournal, journalCount }) {
+export default function Tabs({
+  activeTab,
+  onChange,
+  onOpenJournal,
+  journalCount,
+  showContextToggle,
+  rightCollapsed,
+  onToggleContext,
+}) {
   return (
     <div className="flex items-center justify-between gap-4 px-6 pt-4 border-b border-border bg-bg/80 backdrop-blur">
       <div className="flex items-center gap-1 flex-wrap">
@@ -21,21 +29,60 @@ export default function Tabs({ activeTab, onChange, onOpenJournal, journalCount 
           )
         })}
       </div>
-      <button
-        onClick={onOpenJournal}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary rounded-md border border-transparent hover:border-border transition-colors -mt-1"
-        title="Open research journal"
-        aria-label="Open research journal"
-      >
-        <JournalIcon />
-        <span>Journal</span>
-        {journalCount > 0 && (
-          <span className="bg-accent text-white text-[10px] font-mono px-1.5 py-0.5 rounded-md leading-none">
-            {journalCount}
-          </span>
+      <div className="flex items-center gap-1 -mt-1">
+        {showContextToggle && (
+          <button
+            type="button"
+            onClick={onToggleContext}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+              rightCollapsed
+                ? 'text-text-muted hover:text-text-primary border-transparent hover:border-border'
+                : 'text-text-primary border-border bg-surface'
+            }`}
+            title={rightCollapsed ? 'Show context' : 'Hide context'}
+            aria-label={rightCollapsed ? 'Show context panel' : 'Hide context panel'}
+          >
+            <ContextIcon />
+            <span>Context</span>
+          </button>
         )}
-      </button>
+        <button
+          onClick={onOpenJournal}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary rounded-md border border-transparent hover:border-border transition-colors"
+          title="Open research journal"
+          aria-label="Open research journal"
+        >
+          <JournalIcon />
+          <span>Journal</span>
+          {journalCount > 0 && (
+            <span className="bg-accent text-white text-[10px] font-mono px-1.5 py-0.5 rounded-md leading-none">
+              {journalCount}
+            </span>
+          )}
+        </button>
+      </div>
     </div>
+  )
+}
+
+function ContextIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <line x1="14" y1="4" x2="14" y2="20" />
+      <line x1="17" y1="9" x2="19" y2="9" />
+      <line x1="17" y1="13" x2="19" y2="13" />
+    </svg>
   )
 }
 

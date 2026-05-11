@@ -5,6 +5,11 @@ import DeepDiveTab from './DeepDiveTab'
 import AgentTab from './AgentTab'
 import PaperNetworkTab from './PaperNetworkTab'
 import FigureReaderTab from './FigureReaderTab'
+import EmptyLibraryState from './EmptyLibraryState'
+
+// Tabs that can't do anything without at least one paper. Figure Reader is
+// the exception — it works on any image even with an empty library.
+const REQUIRES_PAPERS = new Set(['ask', 'router', 'deepdive', 'agent', 'network'])
 
 export default function TabPanel({
   activeTab,
@@ -17,6 +22,8 @@ export default function TabPanel({
   addJournalEntry,
   arxivOn,
   onArxivSearch,
+  onUploadFile,
+  onOpenArxiv,
 }) {
   const messages = chats[activeTab] || []
   const onMessagesChange = (fn) => updateChat(activeTab, fn)
@@ -38,6 +45,17 @@ export default function TabPanel({
     [updateSingleshot]
   )
 
+  // Single source of truth for the paper-required empty state — keeps the
+  // prompt identical across tabs 1-5.
+  if (REQUIRES_PAPERS.has(activeTab) && papers.length === 0) {
+    return (
+      <EmptyLibraryState
+        onUploadFile={onUploadFile}
+        onSearchArxiv={onOpenArxiv}
+      />
+    )
+  }
+
   if (activeTab === 'ask') {
     return (
       <AskPaperTab
@@ -48,9 +66,7 @@ export default function TabPanel({
         onJournalEntry={addJournalEntry}
         arxivOn={arxivOn}
         onArxivSearch={onArxivSearch}
-        paperId={
-          singleshot.ask?.paperId ?? papers[0]?.paper_id ?? ''
-        }
+        paperId={singleshot.ask?.paperId ?? papers[0]?.paper_id ?? ''}
         onPaperIdChange={(id) => updateSingleshot('ask', { paperId: id })}
       />
     )

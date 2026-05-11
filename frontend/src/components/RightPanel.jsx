@@ -15,10 +15,47 @@ export default function RightPanel({
   arxivOn,
   onArxivSearch,
   figureControls,
+  isWide = true,
 }) {
   const tab = TABS.find((t) => t.id === activeTab)
   const label = tab?.panel || 'Context'
+  const data = panelData[activeTab]
 
+  // Below the wide breakpoint: nothing inline. When the user opens the panel
+  // via the Tabs-bar toggle we render a drawer overlay instead so the
+  // ~700px center area isn't compressed further.
+  if (!isWide) {
+    if (collapsed) return null
+    return (
+      <>
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={onToggle}
+          aria-hidden="true"
+        />
+        <aside
+          className="fixed right-0 top-0 bottom-0 w-[360px] max-w-[90vw] bg-bg border-l border-border z-50 flex flex-col shadow-2xl"
+          role="dialog"
+          aria-label={label}
+        >
+          <PanelHeader label={label} onToggle={onToggle} narrow />
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            <PanelContent
+              activeTab={activeTab}
+              data={data}
+              papers={papers}
+              onPulsePaper={onPulsePaper}
+              arxivOn={arxivOn}
+              onArxivSearch={onArxivSearch}
+              figureControls={figureControls}
+            />
+          </div>
+        </aside>
+      </>
+    )
+  }
+
+  // Wide mode — inline rail or full panel as before.
   if (collapsed) {
     return (
       <button
@@ -32,23 +69,9 @@ export default function RightPanel({
     )
   }
 
-  const data = panelData[activeTab]
-
   return (
     <aside className="w-[320px] shrink-0 border-l border-border flex flex-col h-full bg-bg">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <span className="text-[11px] uppercase tracking-wider text-text-muted">
-          {label}
-        </span>
-        <button
-          onClick={onToggle}
-          className="btn-ghost text-lg leading-none px-1"
-          aria-label="Collapse context panel"
-          title="Hide context panel"
-        >
-          ›
-        </button>
-      </div>
+      <PanelHeader label={label} onToggle={onToggle} />
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <PanelContent
           activeTab={activeTab}
@@ -61,6 +84,24 @@ export default function RightPanel({
         />
       </div>
     </aside>
+  )
+}
+
+function PanelHeader({ label, onToggle, narrow }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <span className="text-[11px] uppercase tracking-wider text-text-muted">
+        {label}
+      </span>
+      <button
+        onClick={onToggle}
+        className="btn-ghost text-lg leading-none px-1"
+        aria-label={narrow ? 'Close context panel' : 'Collapse context panel'}
+        title={narrow ? 'Close' : 'Hide context panel'}
+      >
+        {narrow ? '×' : '›'}
+      </button>
+    </div>
   )
 }
 

@@ -75,6 +75,30 @@
   animation: tab-fade-in 220ms ease-out;
 }
 
+@keyframes boot-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.boot-fade-in {
+  animation: boot-fade-in 350ms ease-out both;
+}
+
+@keyframes boot-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.boot-fade-out {
+  animation: boot-fade-out 400ms ease-in both;
+}
+
 /* Subtle scrollbars so the dark panels don't get bright OS bars. */
 ::-webkit-scrollbar {
   width: 8px;

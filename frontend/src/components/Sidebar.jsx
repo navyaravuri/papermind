@@ -4,7 +4,7 @@ import { colorForPaper } from '../colors'
 
 export default function Sidebar({
   papers,
-  onUploaded,
+  onUploadFile,
   onDeleted,
   onImported,
   arxivOn,
@@ -28,8 +28,7 @@ export default function Sidebar({
     setUploading(true)
     setError(null)
     try {
-      const record = await api.uploadPaper(f)
-      onUploaded(record)
+      await onUploadFile(f)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -82,10 +81,7 @@ export default function Sidebar({
   return (
     <aside className="w-[280px] shrink-0 border-r border-border flex flex-col h-full bg-bg">
       <div className="px-5 pt-5 pb-4 border-b border-border">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xl font-semibold tracking-tight">PaperMind</span>
-          <span className="text-text-muted text-xs font-mono">v0.1</span>
-        </div>
+        <div className="text-xl font-semibold tracking-tight">PaperMind</div>
       </div>
 
       <div className="px-4 pt-4 space-y-3">
@@ -139,6 +135,8 @@ export default function Sidebar({
           papers={papers}
           onDelete={handleDelete}
           pulseSignals={pulseSignals}
+          uploading={uploading}
+          onUploadClick={() => fileInput.current?.click()}
         />
 
         {arxivOn && (
@@ -151,20 +149,23 @@ export default function Sidebar({
           />
         )}
       </div>
+
+      <div className="px-4 py-2.5 border-t border-border text-[10px] uppercase tracking-wider text-text-muted font-mono flex items-center justify-between">
+        <span>PaperMind</span>
+        <span>v1.0</span>
+      </div>
     </aside>
   )
 }
 
-function PaperList({ papers, onDelete, pulseSignals }) {
+function PaperList({ papers, onDelete, pulseSignals, uploading, onUploadClick }) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wider text-text-muted mb-2 px-1">
         Library ({papers.length})
       </div>
       {papers.length === 0 ? (
-        <div className="text-sm text-text-muted px-1 leading-relaxed">
-          No papers yet. Upload a PDF or import one from arXiv.
-        </div>
+        <SidebarEmptyState uploading={uploading} onUploadClick={onUploadClick} />
       ) : (
         <ul className="space-y-2">
           {papers.map((p) => (
@@ -178,6 +179,85 @@ function PaperList({ papers, onDelete, pulseSignals }) {
         </ul>
       )}
     </div>
+  )
+}
+
+function SidebarEmptyState({ uploading, onUploadClick }) {
+  return (
+    <div className="card border-dashed px-4 py-5 text-center space-y-3">
+      <SidebarIllustration />
+      <div className="text-sm text-text-primary">Upload a paper to get started</div>
+      <button
+        type="button"
+        onClick={onUploadClick}
+        disabled={uploading}
+        className="btn-accent w-full text-xs !py-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {uploading ? 'Uploading…' : 'Upload PDF'}
+      </button>
+    </div>
+  )
+}
+
+function SidebarIllustration() {
+  return (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 48 48"
+      fill="none"
+      className="mx-auto text-text-muted"
+      aria-hidden="true"
+    >
+      <rect
+        x="9"
+        y="6"
+        width="24"
+        height="32"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <rect
+        x="14"
+        y="11"
+        width="24"
+        height="32"
+        rx="2"
+        fill="#1a1a1a"
+        stroke="#7c6af7"
+        strokeWidth="1.4"
+      />
+      <line
+        x1="18"
+        y1="19"
+        x2="34"
+        y2="19"
+        stroke="#7c6af7"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <line
+        x1="18"
+        y1="24"
+        x2="34"
+        y2="24"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+      <line
+        x1="18"
+        y1="29"
+        x2="30"
+        y2="29"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+    </svg>
   )
 }
 

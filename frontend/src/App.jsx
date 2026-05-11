@@ -6,11 +6,36 @@ import Tabs from './components/Tabs'
 import TabPanel from './components/TabPanel'
 import RightPanel from './components/RightPanel'
 import JournalDrawer from './components/JournalDrawer'
+import BootScreen from './components/BootScreen'
+
+// Right panel becomes a drawer overlay below this width.
+const WIDE_BREAKPOINT = 1280
 
 export default function App() {
   const [papers, setPapers] = useState([])
   const [activeTab, setActiveTab] = useState(DEFAULT_TAB)
-  const [rightCollapsed, setRightCollapsed] = useState(false)
+
+  // Start collapsed if we're booting on a narrow viewport — avoids a
+  // first-paint where the right panel briefly takes 320px on a 1024px screen.
+  const initialIsWide =
+    typeof window === 'undefined' ? true : window.innerWidth >= WIDE_BREAKPOINT
+  const [rightCollapsed, setRightCollapsed] = useState(!initialIsWide)
+  const [isWide, setIsWide] = useState(initialIsWide)
+
+  useEffect(() => {
+    function onResize() {
+      const wide = window.innerWidth >= WIDE_BREAKPOINT
+      setIsWide((prev) => {
+        if (prev !== wide) {
+          // Auto-collapse whenever we cross into narrow territory.
+          if (!wide) setRightCollapsed(true)
+        }
+        return wide
+      })
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // Per-tab chat history. Keying by tab id keeps state when the user
   // switches away and back, without re-mounting the tab component.
@@ -93,6 +118,18 @@ export default function App() {
     setArxivQuery(query)
   }, [])
 
+  // App-level upload so EmptyLibraryState (which lives in tabs) doesn't have
+  // to reach into the sidebar. Sidebar's own upload button uses this too.
+  const uploadFile = useCallback(async (file) => {
+    const record = await api.uploadPaper(file)
+    handleUploaded(record)
+    return record
+  }, [])
+
+  const openArxivPanel = useCallback(() => {
+    setArxivOn(true)
+  }, [])
+
   const updateSingleshot = useCallback((tab, patch) => {
     setSingleshot((prev) => ({
       ...prev,
@@ -130,10 +167,12 @@ export default function App() {
   )
 
   return (
+    <>
+      <BootScreen />
     <div className="flex h-full w-full bg-bg text-text-primary">
       <Sidebar
         papers={papers}
-        onUploaded={handleUploaded}
+        onUploadFile={uploadFile}
         onDeleted={handleDeleted}
         onImported={handleImported}
         arxivOn={arxivOn}
@@ -149,6 +188,9 @@ export default function App() {
           onChange={setActiveTab}
           onOpenJournal={() => setJournalOpen(true)}
           journalCount={journal.length}
+          showContextToggle={!isWide}
+          rightCollapsed={rightCollapsed}
+          onToggleContext={() => setRightCollapsed((v) => !v)}
         />
         {/* key={activeTab} replays the fade-in animation on every tab change.
             Per-tab UI state lives in chats/singleshot/panelData up here, so
@@ -165,6 +207,8 @@ export default function App() {
             addJournalEntry={appendJournalEntry}
             arxivOn={arxivOn}
             onArxivSearch={triggerArxivSearch}
+            onUploadFile={uploadFile}
+            onOpenArxiv={openArxivPanel}
           />
         </div>
       </main>
@@ -179,6 +223,7 @@ export default function App() {
         arxivOn={arxivOn}
         onArxivSearch={triggerArxivSearch}
         figureControls={figureControls}
+        isWide={isWide}
       />
 
       <JournalDrawer
@@ -188,5 +233,6 @@ export default function App() {
         tabLabels={tabLabels}
       />
     </div>
+    </>
   )
 }
