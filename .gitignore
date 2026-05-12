@@ -5,3 +5,4 @@ node_modules/
 /backend/data/
 /backend/indexes/
 .ipynb_checkpoints/
+.DS_Store
