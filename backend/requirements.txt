@@ -12,3 +12,5 @@ python-dotenv
 Pillow
 nest_asyncio
 pymupdf
+huggingface_hub
+sentence-transformers

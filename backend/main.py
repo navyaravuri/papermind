@@ -5,13 +5,14 @@ loaded from `llm_setup.py`. Paper PDFs land in `data/`, their persisted
 indexes in `indexes/<paper_id>/`.
 """
 
+import os
 import re
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -37,14 +38,31 @@ from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatMessage
 from llama_index.core.base.llms.types import ImageBlock, TextBlock
 
-app = FastAPI(title="PaperMind API")
+DEMO_KEY = os.getenv("DEMO_KEY")
+
+_default_origins = ["http://localhost:3000", "http://localhost:5173"]
+_frontend_origin = os.getenv("FRONTEND_ORIGIN")
+allow_origins = (
+    [o.strip() for o in _frontend_origin.split(",") if o.strip()] + _default_origins
+    if _frontend_origin
+    else _default_origins
+)
+
+
+def require_demo_key(request: Request, x_demo_key: Optional[str] = Header(default=None)):
+    # /health stays public so the Space URL can be pinged without a key.
+    # No-op when DEMO_KEY is unset so local dev stays frictionless.
+    if request.url.path == "/health":
+        return
+    if DEMO_KEY and x_demo_key != DEMO_KEY:
+        raise HTTPException(status_code=401, detail="invalid or missing X-Demo-Key")
+
+
+app = FastAPI(title="PaperMind API", dependencies=[Depends(require_demo_key)])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",  # Vite default
-    ],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -3,9 +3,12 @@
 // deployed backend later without touching the components.
 
 const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+const DEMO_KEY = import.meta.env.VITE_DEMO_KEY || ''
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, options)
+  const headers = { ...(options.headers || {}) }
+  if (DEMO_KEY) headers['X-Demo-Key'] = DEMO_KEY
+  const res = await fetch(`${BASE}${path}`, { ...options, headers })
   if (!res.ok) {
     let detail = ''
     try {
